@@ -1,6 +1,8 @@
 #ifndef SRC_HPP
 #define SRC_HPP
 
+#include <algorithm>
+
 class BuddyAllocator {
 private:
     struct Node {
@@ -22,14 +24,17 @@ private:
     int min_block_size;
 
     Node* find_free(Node* node, int size) {
-        if (!node || node->allocated || node->size < size) return nullptr;
+        if (!node || node->size < size) return nullptr;
+
+        // If it's already fully allocated or split and children don't have enough space
+        if (node->allocated) return nullptr;
 
         // If it's a leaf and size matches exactly
         if (!node->left && !node->right) {
             if (node->size == size) return node;
             // Split if larger
             int half = node->size / 2;
-            if (half >= min_block_size) {
+            if (half >= size && half >= min_block_size) {
                 node->left = new Node(half, node->addr, node);
                 node->right = new Node(half, node->addr + half, node);
                 return find_free(node->left, size);
@@ -47,19 +52,10 @@ private:
         if (!node || node->addr > addr || node->addr + node->size <= addr) return nullptr;
 
         if (node->size == size && node->addr == addr) {
-            if (node->allocated) return nullptr;
-            // If it has children, it's not a leaf, so it's "partially allocated" or split
-            if (node->left || node->right) {
-                // If it's split but the children are free, we can theoretically re-allocate here
-                // but usually malloc_at on a split block is complex.
-                // However, the problem says "malloc_at", and buddy allocator allows re-merging if free.
-                // For now, let's assume it should only succeed if the exact block is a leaf and free.
-                return nullptr;
-            }
+            if (node->allocated || node->left || node->right) return nullptr;
             return node;
         }
 
-        // If it's already allocated (and not split further to the size we want), we can't allocate here
         if (node->allocated) return nullptr;
 
         // If it's a leaf but larger than size, split it
@@ -92,7 +88,10 @@ private:
 
     Node* find_node_to_free(Node* node, int addr, int size) {
         if (!node || node->addr > addr || node->addr + node->size <= addr) return nullptr;
-        if (node->size == size && node->addr == addr) return node;
+        if (node->size == size && node->addr == addr) {
+            if (node->allocated && !node->left && !node->right) return node;
+            return nullptr;
+        }
 
         Node* res = find_node_to_free(node->left, addr, size);
         if (res) return res;
