@@ -5,7 +5,7 @@
 int main() {
     // Basic test from description
     // ram_size = 64, min_block_size = 4
-    BuddyAllocator ba(64, 4);
+    AllocatorTester ba(64, 4);
 
     // malloc(8) should return 0
     int a1 = ba.malloc(8);

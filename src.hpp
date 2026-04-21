@@ -3,7 +3,7 @@
 
 #include <algorithm>
 
-class BuddyAllocator {
+class AllocatorTester {
 private:
     struct Node {
         int size;
@@ -25,14 +25,10 @@ private:
 
     Node* find_free(Node* node, int size) {
         if (!node || node->size < size) return nullptr;
-
-        // If it's already fully allocated or split and children don't have enough space
         if (node->allocated) return nullptr;
 
-        // If it's a leaf and size matches exactly
         if (!node->left && !node->right) {
             if (node->size == size) return node;
-            // Split if larger
             int half = node->size / 2;
             if (half >= size && half >= min_block_size) {
                 node->left = new Node(half, node->addr, node);
@@ -42,7 +38,6 @@ private:
             return nullptr;
         }
 
-        // Try left then right
         Node* res = find_free(node->left, size);
         if (res) return res;
         return find_free(node->right, size);
@@ -58,7 +53,6 @@ private:
 
         if (node->allocated) return nullptr;
 
-        // If it's a leaf but larger than size, split it
         if (!node->left && !node->right) {
             int half = node->size / 2;
             if (half >= size && half >= min_block_size) {
@@ -99,11 +93,11 @@ private:
     }
 
 public:
-    BuddyAllocator(int ram_size, int min_block_sz) : min_block_size(min_block_sz) {
+    AllocatorTester(int ram_size, int min_block_sz) : min_block_size(min_block_sz) {
         root = new Node(ram_size, 0);
     }
 
-    ~BuddyAllocator() {
+    ~AllocatorTester() {
         delete root;
     }
 
